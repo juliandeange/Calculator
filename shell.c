@@ -11,6 +11,8 @@
 
 char history[500][500];
 int append = 0;
+long histVal;
+int flag = 0;
 
 // Hold integer for number of parameters in command
 typedef struct NumArgs {
@@ -57,12 +59,40 @@ char ** parseLine(char * line, NumArgs * totalArg) {
     return args;
 }
 
+void addToHistory(char buffer[]) {
+    strcpy(history[append], buffer);
+    append++;
+}
+
+void printHistory() {
+    if (flag == 1) {
+        for (int i = append - histVal; i < append; i++)
+            printf("%d   %s", i + 1, history[i]);
+    }
+    else {
+        for (int i = 0; i < append; i++)
+            printf("%d   %s", i + 1, history[i]);
+    }
+    flag = 0;
+}
+
 // Forks cild process to execute the command entered
 // Error message will be returned if command is invalid
 void runCommand(char * line, char ** args, NumArgs * totalArg) {
 
     pid_t pid;
     int noCmd = 0;
+
+    if (strcmp(args[0], "history") == 0) {
+        histVal = strtol(args[1], args, histVal);
+        if (histVal == 0) {
+            printf("-bash: history: %s: numeric argument required\n", args[1]);
+            return;
+        }
+        flag = 1;
+        printHistory();
+        return;
+    }
 
     pid = fork();
     if (pid < 0) {
@@ -84,19 +114,6 @@ void runCommand(char * line, char ** args, NumArgs * totalArg) {
     }
 }//end runProgram()
 
-void addToHistory(char buffer[]) {
-    strcpy(history[append], buffer);
-    append++;
-}
-
-void printHistory() {
-    for (int i = 0; i < append; i++)
-        printf("%d   %s", i + 1, history[i]);
-}
-
-
-
-
 // Contains command loop calling functions for reading / parsing / executing line
 // Stores commands entered in history data structure
 // If user enters a newline character "\n" the loop repeats itself
@@ -108,9 +125,9 @@ int main (int argc, char * argv[]) {
     char * line;
     char ** args;
     do {
-
-        char buffer[200];
         printf("> ");
+        char buffer[200];
+        histVal = 0;
         NumArgs * totalArg;
         totalArg = malloc(sizeof(NumArgs));
         totalArg->num = 0;
