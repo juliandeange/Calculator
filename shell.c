@@ -9,10 +9,12 @@
 
 #define DELIMETERS " \n\r"
 
-char history[500][500];
+char history[5000][5000];
 int append = 0;
 long histVal;
-int flag = 0;
+int histFlag = 0;
+int redirectOut = 0;
+int redirectIn = 0;
 
 // Hold integer for number of parameters in command
 typedef struct NumArgs {
@@ -65,7 +67,7 @@ void addToHistory(char buffer[]) {
 }
 
 void printHistory() {
-    if (flag == 1) {
+    if (histFlag == 1) {
         if (histVal > append) {
             for (int i = 0; i < append; i++)
                 printf("%d   %s", i + 1, history[i]);
@@ -78,7 +80,20 @@ void printHistory() {
         for (int i = 0; i < append; i++)
             printf("%d   %s", i + 1, history[i]);
     }
-    flag = 0;
+    histFlag = 0;
+}
+
+void checkFlags(int numArgs, char ** args) {
+
+    for (int i = 0; i < numArgs - 1; i++) {
+        if (strcmp(args[i],">") == 0)
+            redirectOut = i;
+        if (strcmp(args[i],"<") == 0)
+            redirectIn = i;
+    }
+    // printf("in: %d\n", redirectIn);
+    // printf("out: %d\n", redirectOut);
+
 }
 
 // Forks cild process to execute the command entered
@@ -87,6 +102,7 @@ void runCommand(char * line, char ** args, NumArgs * totalArg) {
 
     pid_t pid;
     int noCmd = 0;
+    FILE * file = NULL;
 
     if (strcmp(args[0], "history") == 0) {
         histVal = strtol(args[1], args, histVal);
@@ -94,7 +110,7 @@ void runCommand(char * line, char ** args, NumArgs * totalArg) {
             printf("-bash: history: %s: numeric argument required\n", args[1]);
             return;
         }
-        flag = 1;
+        histFlag = 1;
         printHistory();
         return;
     }
@@ -108,10 +124,15 @@ void runCommand(char * line, char ** args, NumArgs * totalArg) {
 
         if (strcmp(args[0], "exit") == 0)
             exit(-1);
-
+        
+        // if (redirectOut > 0)
+        //     file = freopen(args[redirectOut + 1], "w+", stdout);
         noCmd = execvp(args[0], args);
+        fclose(file);
+        
         if (noCmd == -1)
             printf("-bash: %s: command not found\n", line);
+        //fclose(file);
         exit(-1);
     }
     else {
@@ -130,15 +151,17 @@ int main (int argc, char * argv[]) {
     char * line;
     char ** args;
     do {
+
         printf("> ");
         char buffer[200];
         histVal = 0;
         NumArgs * totalArg;
         totalArg = malloc(sizeof(NumArgs));
+        redirectIn = 0;
+        redirectOut = 0;
         totalArg->num = 0;
 
         line = readLine(buffer);
-        
         addToHistory(buffer);
 
         if (strcmp(line, "history\n") == 0) {
@@ -150,6 +173,7 @@ int main (int argc, char * argv[]) {
         if (args == NULL)
             continue;
 
+        checkFlags(totalArg->num, args);
         runCommand(line, args, totalArg);
 
         if (strcmp(line, "exit") == 0)
@@ -165,7 +189,7 @@ int main (int argc, char * argv[]) {
     printf("\n");
     printf("[Process completed]\n");
 
-        return 0;
+    return 0;
 }
 
 
