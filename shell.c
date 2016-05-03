@@ -66,6 +66,11 @@ void addToHistory(char buffer[]) {
 
 void printHistory() {
     if (flag == 1) {
+        if (histVal > append) {
+            for (int i = 0; i < append; i++)
+                printf("%d   %s", i + 1, history[i]);
+            return;
+        }
         for (int i = append - histVal; i < append; i++)
             printf("%d   %s", i + 1, history[i]);
     }
@@ -132,7 +137,6 @@ int main (int argc, char * argv[]) {
         totalArg = malloc(sizeof(NumArgs));
         totalArg->num = 0;
 
-        //printf("pre read");
         line = readLine(buffer);
         
         addToHistory(buffer);
