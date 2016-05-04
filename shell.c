@@ -91,8 +91,29 @@ void checkFlags(int numArgs, char ** args) {
         if (strcmp(args[i],"<") == 0)
             redirectIn = i;
     }
-    // printf("in: %d\n", redirectIn);
-    // printf("out: %d\n", redirectOut);
+}
+
+void pipeOut(char ** args, NumArgs * totalArg) {
+
+    pid_t pid;
+    FILE * file = NULL;
+
+    pid = fork();
+    if (pid < 0) {
+        printf("Error forking\n");
+        exit(0);
+    }
+    else if (pid == 0) {
+        file = freopen(args[redirectOut + 1], "w+", stdout);
+        args[redirectOut] = NULL;
+        args[redirectOut + 1] = NULL;
+        execvp(args[0], args);
+        fclose(file);
+        exit(-1);
+    }
+    else
+        wait(NULL);
+
 
 }
 
@@ -102,7 +123,6 @@ void runCommand(char * line, char ** args, NumArgs * totalArg) {
 
     pid_t pid;
     int noCmd = 0;
-    FILE * file = NULL;
 
     if (strcmp(args[0], "history") == 0) {
         histVal = strtol(args[1], args, histVal);
@@ -128,7 +148,7 @@ void runCommand(char * line, char ** args, NumArgs * totalArg) {
         // if (redirectOut > 0)
         //     file = freopen(args[redirectOut + 1], "w+", stdout);
         noCmd = execvp(args[0], args);
-        fclose(file);
+       // fclose(file);
         
         if (noCmd == -1)
             printf("-bash: %s: command not found\n", line);
@@ -174,6 +194,12 @@ int main (int argc, char * argv[]) {
             continue;
 
         checkFlags(totalArg->num, args);
+
+        if (redirectOut > 0) {
+            pipeOut(args, totalArg);
+            continue;
+        }
+
         runCommand(line, args, totalArg);
 
         if (strcmp(line, "exit") == 0)
